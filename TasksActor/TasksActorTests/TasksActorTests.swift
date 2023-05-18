@@ -38,7 +38,7 @@ final class TasksActorTests: XCTestCase {
 
         // then
         XCTAssertEqual(Set(result).count, 1)
-        let valueIfLaunched = try await sut.valueIfLaunched(byKey: key)
+        let valueIfLaunched = try await sut.operationLaunched(byKey: key)
         XCTAssertNil(valueIfLaunched)
         let lastResult = await sut.results[key]
         XCTAssertNotNil(try lastResult?.get())
@@ -74,7 +74,7 @@ final class TasksActorTests: XCTestCase {
 
         // then
         XCTAssertEqual(result, [0, 1])
-        let valueIfLaunched = try await sut.valueIfLaunched(byKey: key)
+        let valueIfLaunched = try await sut.operationLaunched(byKey: key)
         XCTAssertNil(valueIfLaunched)
         let lastResult = await sut.results[key]
         XCTAssertEqual(try lastResult?.get(), 1)
@@ -96,7 +96,7 @@ final class TasksActorTests: XCTestCase {
             taskGroup.addTask {
                 await Task.yield()
                 try await Task.sleep(nanoseconds: NSEC_PER_SEC / 100)
-                return try await sut.valueIfLaunched(byKey: key) ?? 0
+                return try await sut.operationLaunched(byKey: key) ?? 0
             }
 
             var values: [Int] = []
@@ -107,7 +107,7 @@ final class TasksActorTests: XCTestCase {
         }
 
         XCTAssertEqual(result, [1, 1])
-        let valueIfLaunched = try await sut.valueIfLaunched(byKey: key)
+        let valueIfLaunched = try await sut.operationLaunched(byKey: key)
         XCTAssertNil(valueIfLaunched)
         let lastResult = await sut.results[key]
         XCTAssertEqual(try lastResult?.get(), 1)
@@ -119,7 +119,7 @@ final class TasksActorTests: XCTestCase {
         let sut = TasksActor<String, Int>()
 
         // when
-        let result = try await sut.valueIfLaunched(byKey: key)
+        let result = try await sut.operationLaunched(byKey: key)
 
         // then
         XCTAssertNil(result)

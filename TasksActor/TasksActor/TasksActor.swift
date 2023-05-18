@@ -8,8 +8,10 @@
 actor TasksActor<Key: Hashable & Sendable, Value: Sendable> {
     private var tasks: [Key: Task<Value, Error>] = [:]
 
-    /// Подключиться к текущей задаче, если она есть. Если ее нет, то вернется `nil`
-    func valueIfLaunched(byKey key: Key) async throws -> Value? {
+    /// Attach to an already running operation
+    /// - Parameter key: Key of the operation
+    /// - Returns: Value returned by corresponding running operation or `nil` if there is no operation by the key
+    func operationLaunched(byKey key: Key) async throws -> Value? {
         if let currentTask = tasks[key] {
             return try await withCancellation(of: currentTask)
         } else {
@@ -17,29 +19,29 @@ actor TasksActor<Key: Hashable & Sendable, Value: Sendable> {
         }
     }
 
+    /// Results of async work
     private(set) var results: [Key: Result<Value, Error>] = [:]
 
-    /// Выполнить асинхронную задачу, если текущей задачи нет.
-    /// Если текущая задача есть, то подключиться к ней и ожидать ее результата
-    /// - Parameter launchClosure: Асинхронная задача
-    /// - Returns: Значение, возвращаемое текущей или новой асинхронной задачей
+    /// Start a new async operation by key or attach to an already running operation
+    /// - Parameter operation: Async operation
+    /// - Returns: Value returned by corresponding running operation or a new operation
     func launchIfNeeded(
         byKey key: Key,
-        _ launchClosure: @escaping @Sendable () async throws -> Value
+        _ operation: @escaping @Sendable () async throws -> Value
     ) async throws -> Value {
-        if let value = try await valueIfLaunched(byKey: key) {
+        if let value = try await operationLaunched(byKey: key) {
             return value
         }
-        return try await launch(byKey: key, launchClosure)
+        return try await launch(byKey: key, operation)
     }
 
     private func launch(
         byKey key: Key,
-        _ launchClosure: @escaping @Sendable () async throws -> Value
+        _ operation: @escaping @Sendable () async throws -> Value
     ) async throws -> Value {
         let task = Task<Value, Error> {
             do {
-                let value = try await launchClosure()
+                let value = try await operation()
                 results[key] = .success(value)
                 tasks[key] = nil
                 return value
